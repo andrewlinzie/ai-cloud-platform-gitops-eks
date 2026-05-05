@@ -305,23 +305,99 @@ This demonstrates real-time autoscaling behavior in a live Kubernetes environmen
 
 ---
 
-# 👀 Observability Readiness
+# 🔍 Observability & Reliability
 
-The platform includes foundational observability signals:
-- `/health` endpoints for all services
-- Kubernetes logs (kubectl logs)
-- ArgoCD deployment visibility
-- CI/CD pipeline logs (GitHub + Jenkins)
+The platform now includes a production-style observability layer across application, platform, infrastructure, and deployment systems.
 
-This enables:
-- debugging deployments
-- validating runtime behavior
-- monitoring system health
+## Observability Stack
 
-The system is designed to support future integration with:
-- Prometheus
-- Grafana
-- centralized logging
+| Layer | Tool | Responsibility |
+|---|---|---|
+| Application Metrics | Prometheus | API and AI service metrics exposed through `/metrics` |
+| Kubernetes Runtime | Prometheus | Pod health, resource usage, restarts, and runtime behavior |
+| Dashboards | Grafana | API, AI inference, and platform dashboards |
+| AWS Infrastructure | CloudWatch | CMS EC2 health and CPU alarms |
+| Deployment Visibility | ArgoCD | GitOps sync status, health, and drift visibility |
+| CI/CD Visibility | GitHub Actions + Jenkins | Build, deploy, and pipeline execution history |
+
+## Metrics Implemented
+
+### API Service
+
+- Request rate
+- Success rate
+- Error count
+- p95 / p99 latency
+- Downstream AI latency
+- Pod replacement and restart visibility
+
+### AI Inference Service
+
+- Inference request rate
+- Inference success rate
+- Inference errors
+- Inference p95 latency
+- Model processing p95
+- Memory usage
+- Pod replacement and restart visibility
+
+### Platform
+
+- Pod CPU and memory usage
+- Node CPU and memory usage
+- Pod lifecycle behavior
+- Cluster-wide restart visibility
+
+### CMS / EC2
+
+- EC2 status check alarm
+- EC2 CPU utilization alarm
+
+Disk and memory alarms were intentionally not implemented yet because the CMS instance does not currently run the CloudWatch Agent required for those custom metrics.
+
+## Alerting
+
+Alerting was added using:
+
+- Grafana-managed alerts for Kubernetes and service-level signals
+- Terraform-managed CloudWatch alarms for CMS infrastructure health
+
+Configured alert categories include:
+
+- API 5xx error rate
+- API high latency
+- API pod replacement/restart behavior
+- AI inference latency
+- AI inference errors
+- AI pod replacement/restart behavior
+- Platform pod health signals
+- CMS EC2 status check failure
+- CMS CPU utilization
+
+Alert thresholds use pending periods to reduce noise from short-lived dev failures.
+
+## Failure Validation
+
+Controlled failure scenarios were used to validate observability behavior:
+
+- API dependency degradation
+- API pod replacement / Kubernetes self-healing
+- Sustained AI dependency outage
+- Application-level error generation
+- Platform pod lifecycle visibility
+
+These tests confirmed that the dashboards can show failure symptoms, identify the impacted layer, and confirm recovery behavior.
+
+## Reliability Model
+
+SLIs and production-style SLOs were defined for:
+
+- API availability and latency
+- AI inference success and latency
+- Downstream dependency health
+- CMS infrastructure health
+
+Although validated in a dev environment, the metrics and alerting model were designed to simulate production reliability practices.
 
 ---
 
@@ -364,9 +440,13 @@ This avoids unnecessary complexity while maintaining flexibility.
 The following improvements were identified but not implemented in the current scope:
 - Traffic ingress layer (ALB / API Gateway / Route 53)
 - Managed data persistence layer (RDS, DynamoDB, or S3)
-- Advanced observability (Prometheus, Grafana, alerting)
 - Multi-AZ resilience and failover strategies
 - Enhanced retry and failure-handling mechanisms
+- Distributed tracing with OpenTelemetry
+- Centralized structured logging
+- CloudWatch Agent for CMS disk and memory metrics
+- SLO burn-rate dashboards and error-budget tracking
+- Notification routing for dev/staging/prod alert severity
 
 ---
 
@@ -379,6 +459,11 @@ The following improvements were identified but not implemented in the current sc
 - Clear system boundaries
 - Hybrid architecture (EKS + EC2)
 - End-to-end working platform
+- Prometheus + Grafana observability layer
+- Grafana-managed alerting for service and platform health
+- Terraform-managed CloudWatch alarms for CMS infrastructure
+- Production-style SLIs/SLOs for API, AI, and CMS reliability
+- Controlled failure validation for diagnosis and recovery
 
 ---
 
